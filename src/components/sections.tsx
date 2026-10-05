@@ -1,7 +1,6 @@
 "use client";
 
 import { InstagramIcon, LinkedinIcon } from "@/components/brand-icons";
-import { useWindows } from "@/components/windows";
 import { useState } from "react";
 import {
   ChevronDown,
@@ -213,11 +212,15 @@ export function PortfolioSection() {
 
 export function AboutWindow() {
   const [futureOpen, setFutureOpen] = useState(false);
-  const { openWindow } = useWindows();
   return (
+    /**
+     * Dřív / Teď / Budoucnost. The section itself stays transparent so it melts
+     * into the continuous white content background around it — the desktop
+     * wallpaper must never appear behind this window.
+     */
     <section
       id="about"
-      className="relative z-50 mx-auto max-w-[1060px] scroll-mt-24 px-6 py-16"
+      className="relative z-50 mx-auto max-w-[1060px] scroll-mt-24 bg-white px-6 py-16"
     >
       <div className="overflow-hidden rounded-xl border border-black/15 bg-white shadow-[0_18px_50px_rgba(0,0,0,0.10)] transition-shadow duration-300 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
         <div className="relative flex items-center gap-2 border-b border-black/10 bg-[#f5f5f5] px-4 py-2.5">
@@ -275,14 +278,6 @@ export function AboutWindow() {
               >
                 Dovednosti
               </a>
-              {/* „Sneaky" vstup do kreativního portfolia — schovaná zkratka v textu */}
-              <button
-                onClick={() => openWindow("portfolio")}
-                title="Nápověda: skrytá zkratka do kreativního portfolia"
-                className="rounded-full bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all duration-300 hover:from-red-600 hover:to-red-700 hover:-translate-y-0.5"
-              >
-                Portfolio
-              </button>
             </div>
           </div>
         </div>

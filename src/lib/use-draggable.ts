@@ -72,7 +72,9 @@ export function useDraggable(storageKey: string, anchor: Anchor) {
     (e: React.PointerEvent) => {
       if (e.pointerType === "touch") return; // touch scroll wins on mobile
       cancelSnap();
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      // NOTE: the pointer is *not* captured here. Capturing on pointerdown makes
+      // Chromium retarget the following click to this wrapper, so the inner
+      // button never receives the single click that must open it immediately.
       preDrag.current = { x: offset.x, y: offset.y };
       start.current = { px: e.clientX, py: e.clientY, ox: offset.x, oy: offset.y };
       dragged.current = false;
@@ -84,7 +86,16 @@ export function useDraggable(storageKey: string, anchor: Anchor) {
     if (!start.current) return;
     const dx = e.clientX - start.current.px;
     const dy = e.clientY - start.current.py;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragged.current = true;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      if (!dragged.current) {
+        // Capture only once the gesture is definitely a drag — from here on
+        // move events keep coming even when the pointer leaves the element.
+        dragged.current = true;
+        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      }
+    } else if (!dragged.current) {
+      return; // below the drag threshold: treat as a click/tap
+    }
     setOffset({ x: start.current.ox + dx, y: start.current.oy + dy });
   }, []);
 
@@ -92,7 +103,9 @@ export function useDraggable(storageKey: string, anchor: Anchor) {
     (e: React.PointerEvent) => {
       if (!start.current) return;
       start.current = null;
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      if ((e.currentTarget as HTMLElement).hasPointerCapture?.(e.pointerId)) {
+        (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      }
 
       if (!dragged.current) return; // it was a click, not a drag
       dragged.current = false;

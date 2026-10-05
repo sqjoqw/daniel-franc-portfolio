@@ -1,30 +1,24 @@
 "use client";
 
-import { InstagramIcon, LinkedinIcon } from "@/components/brand-icons";
-import { FolderIcon, PCIcon } from "@/components/folder-icon";
-import {
-  Award,
-  Briefcase,
-  Calendar,
-  Home,
-  Mail,
-  SquareTerminal,
-  User,
-} from "lucide-react";
-import { desktopIcons, hero, identity, navLinks } from "@/data/site";
+import { Award, Briefcase, Home, Mail, User } from "lucide-react";
+import { hero, identity, navLinks } from "@/data/site";
 import { useNow } from "@/lib/use-now";
 import {
+  CalendarCard,
   CalendarWidget,
+  ClockCard,
   ClockWidget,
   DesktopIcons,
+  DockBar,
   DockWidget,
   MenuBar,
+  MusicCard,
   MusicWidget,
+  PhotoCard,
   PhotoWidget,
+  WeatherCard,
   WeatherWidget,
-  glassCardClass,
 } from "@/components/widgets";
-import { useWindows } from "@/components/windows";
 
 /* ------------------------------------------------------------------ */
 /* Hero (desktop, centered behind widgets)                             */
@@ -32,8 +26,13 @@ import { useWindows } from "@/components/windows";
 
 function HeroCenter() {
   return (
-    <div className="pointer-events-none flex h-full items-center justify-center px-6">
-      <div className="max-w-3xl text-center">
+    /*
+     * The Creative Portfolio folder owns the exact center of the desktop, so
+     * the hero copy sits right underneath it — clear of the widget rows on the
+     * left, the icon column on the right and the dock at the bottom.
+     */
+    <div className="pointer-events-none absolute inset-x-0 top-[calc(50%+110px)] flex justify-center px-6">
+      <div className="max-w-4xl text-center">
         <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl 2xl:text-6xl">
           <span className="hero-line hero-line-1">{hero.line1}</span>
           <br />
@@ -78,142 +77,69 @@ function Wallpaper() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mobile stack                                                        */
+/* Mobile desktop — the same OS, rearranged for a phone viewport       */
 /* ------------------------------------------------------------------ */
 
-function MobileStack() {
-  const { openWindow } = useWindows();
-  const today = new Date();
+/**
+ * Mobile is not a different website: it is the same desktop environment
+ * (wallpaper, menu bar, hero, folder icons, clock, calendar, music player,
+ * weather, dock and every window) laid out so it fits the phone viewport.
+ * Nothing is hidden — elements are scaled and repositioned instead.
+ */
+function MobileDesktop() {
   return (
-    <div className="flex h-full flex-col px-4 pb-4 pt-4">
-      {/* Header card */}
-      <div className={`${glassCardClass} !p-4 mb-3`}>
-        <h1 className="text-2xl font-extrabold leading-[1.08] tracking-tight">
-          {hero.line1}
-          <br />
-          {hero.line2Pre}
-          <a
-            href={identity.school.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-black/20 decoration-[3px] underline-offset-[6px] transition-colors hover:decoration-black/60"
-          >
-            {hero.line2Link}
-          </a>
-          {hero.line2Post}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-black/55">{hero.description}</p>
-      </div>
+    <div className="relative z-0 min-h-[100dvh] w-full overflow-hidden bg-white md:hidden">
+      <Wallpaper />
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <button
-          onClick={() => openWindow("booking")}
-          title="Naplánovat schůzku"
-          className={`${glassCardClass} flex h-24 cursor-pointer flex-col justify-center !p-3 text-left transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]`}
-        >
-          <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-accent">
-            {today.toLocaleDateString("cs-CZ", { weekday: "long" })}
+      <div className="relative z-10 flex min-h-[100dvh] w-full flex-col px-3 pb-4 pt-9">
+        <MenuBar />
+
+        {/* Desktop hero, scaled down */}
+        <div className="w-full text-center">
+          <h1 className="text-[26px] font-extrabold leading-[1.08] tracking-tight">
+            <span className="hero-line hero-line-1">{hero.line1}</span>
+            <br />
+            <span className="hero-line hero-line-2">
+              {hero.line2Pre}
+              <a
+                href={identity.school.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-black/20 decoration-[3px] underline-offset-[6px] transition-colors hover:decoration-black/60"
+              >
+                {hero.line2Link}
+              </a>
+              {hero.line2Post}
+            </span>
+          </h1>
+          <p className="hero-line hero-line-3 mx-auto mt-3 max-w-md text-[13px] leading-relaxed text-black/55">
+            {hero.description}
           </p>
-          <p className="text-2xl font-semibold leading-none tracking-tight">
-            {today.getDate()}
-          </p>
-          <p className="mt-1 text-[10px] text-black/45">Klikni a naplánuj schůzku</p>
-        </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={identity.portrait}
-          alt={identity.portraitAlt}
-          width={80}
-          height={80}
-          className="h-24 w-full rounded-xl border border-white/45 object-cover shadow-[0_4px_16px_rgba(0,0,0,0.10)]"
-        />
-      </div>
+        </div>
 
-      {/* Desktop icons - scrollable row */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-thin">
-        {desktopIcons.map((icon) => (
-          <button
-            key={icon.label}
-            onClick={() => {
-              if (icon.type === "portfolio") {
-                openWindow("portfolio");
-              } else if (icon.type === "settings") {
-                openWindow("settings");
-              } else if (icon.type === "skill" && icon.target) {
-                openWindow("folder", icon.target);
-              }
-            }}
-            className="flex-shrink-0 flex w-16 flex-col items-center gap-1 focus:outline-none focus:ring-2 focus:ring-accent rounded-lg transition-transform duration-200 hover:scale-105 active:scale-95"
-            title={icon.description ?? icon.label}
-          >
-            {icon.type === "settings" ? (
-              <PCIcon className="h-10 w-10" />
-            ) : (
-              <FolderIcon
-                className="h-10 w-10"
-                color={icon.type === "portfolio" ? "red" : "blue"}
-              />
-            )}
-            <span className="block w-16 truncate text-center text-[9px] font-medium text-black/70">
-              {icon.label}
-            </span>
-          </button>
-        ))}
-      </div>
+        {/* Desktop icons: Creative Portfolio centered, locked folders below */}
+        <div className="mt-5 w-full">
+          <DesktopIcons variant="mobile" />
+        </div>
 
-      {/* Dock */}
-      <div className={`${glassCardClass} !p-2 mt-auto`}>
-        <div className="grid grid-cols-5 gap-1">
-          <a
-            href={`mailto:${identity.email}`}
-            className="flex items-center justify-center"
-            aria-label="E-mail"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[20%] border border-black/10 bg-white text-black shadow-sm">
-              <Mail className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </a>
-          <a
-            href={identity.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center"
-            aria-label="LinkedIn"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[20%] bg-[#0A66C2] text-white shadow-sm">
-              <LinkedinIcon className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </a>
-          <a
-            href={identity.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center"
-            aria-label="Instagram"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[20%] bg-gradient-to-b from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white shadow-sm">
-              <InstagramIcon className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </a>
-          <button
-            onClick={() => openWindow("terminal")}
-            className="flex items-center justify-center"
-            aria-label="Terminál"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[20%] bg-[#1d1e26] text-white shadow-sm">
-              <SquareTerminal className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </button>
-          <button
-            onClick={() => openWindow("booking")}
-            className="flex items-center justify-center"
-            aria-label="Kalendář"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[20%] border border-black/10 bg-white text-black shadow-sm">
-              <Calendar className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </button>
+        {/* Desktop widgets, scaled */}
+        <div className="mt-5 grid w-full grid-cols-3 gap-3">
+          <ClockCard className="aspect-square w-full" />
+          <CalendarCard className="aspect-square w-full" />
+          <PhotoCard className="aspect-square w-full" />
+        </div>
+
+        <div className="mt-3 w-full">
+          <MusicCard className="h-auto w-full" />
+        </div>
+
+        <div className="mt-3 w-full">
+          <WeatherCard className="w-full" />
+        </div>
+
+        {/* Dock */}
+        <div className="mt-auto w-full pt-4">
+          <DockBar />
         </div>
       </div>
     </div>
@@ -290,15 +216,18 @@ export function FloatingNav() {
 
 export function Desktop() {
   return (
-    /* Main container: pinned to the top of the viewport on desktop so the whole
-       desktop (icons + widgets) sits ON the wallpaper, never below it. Sections
-       then scroll over it. NOTE: no ancestor may set overflow, otherwise
-       position: sticky stops working against the viewport. */
-    <div className="relative z-0 mx-auto aspect-[16/9] w-full max-w-[177.78vh] overflow-hidden bg-white md:sticky md:top-0 md:z-0 md:aspect-auto md:h-[100dvh] md:min-h-0 md:max-w-none">
-      <Wallpaper />
-
-      {/* Desktop view - hidden on mobile */}
-      <div className="hidden h-full w-full overflow-hidden md:block">
+    <>
+      {/**
+       * Page structure:
+       * 1) Desktop (md and up) — the OS-style hero with wallpaper, pinned to the
+       *    top of the viewport while the white content area scrolls over it.
+       * 2) Mobile — the exact same desktop environment, rearranged for a phone
+       *    viewport so nothing is hidden and everything stays tappable.
+       * 3) Every informational section below lives on one continuous white
+       *    background, so the wallpaper never shows through again.
+       */}
+      <div className="relative z-0 hidden h-[100dvh] w-full overflow-hidden bg-white md:sticky md:top-0 md:block md:min-h-0">
+        <Wallpaper />
         <MenuBar />
         <DesktopIcons />
         <ClockWidget />
@@ -310,10 +239,7 @@ export function Desktop() {
         <HeroCenter />
       </div>
 
-      {/* Mobile stack - visible on mobile */}
-      <div className="flex h-full flex-col px-4 pb-6 pt-4 md:hidden">
-        <MobileStack />
-      </div>
-    </div>
+      <MobileDesktop />
+    </>
   );
 }

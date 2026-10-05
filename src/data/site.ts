@@ -27,10 +27,10 @@ export const hero = {
 } as const;
 
 export const music = {
-  title: "Demo Loop",
-  artist: "Daniel Franc — demo audio",
-  src: "/audio/demo-loop.wav",
-  // Sem přidej vlastní skladbu: soubor vlož do /public/audio a uprav cestu výš.
+  title: "Heartbeat",
+  artist: "Childish Gambino",
+  src: "/audio/heartbeat.mp3",
+  cover: "/audio/heartbeat-cover.jpg",
 } as const;
 
 export const weather = {
@@ -57,6 +57,8 @@ export type DesktopIconDef = {
   target?: string;
   /** Podtitul zobrazený v otevřené složce */
   description?: string;
+  /** Slovík pro centrati na plochu */
+  center?: boolean;
 };
 
 export const desktopIcons: DesktopIconDef[] = [
@@ -94,6 +96,7 @@ export const desktopIcons: DesktopIconDef[] = [
     label: "Creative Portfolio",
     type: "portfolio",
     description: "Galerie mé vizuální tvorby — fotky, grafika i videa.",
+    center: true,
   },
   {
     label: "Tento počítač",
@@ -310,16 +313,16 @@ export const about = {
   sections: [
     {
       label: "Dřív",
-      text: "Od malička mě bavily technologie. Postupem času jsem zjistil, že mě táhnou hlavně k vizuální tvorbě — začal jsem se věnovat produkci a postprodukci videí, kde propojuji technické znalosti s kreativitou.",
+      text: "Od malička mě bavily technologie. Postupně jsem ale zjistil, že mě nejvíc táhne tvorba a začal jsem u videa a postupně jsem se dostal od samotné produkce a postprodukce ke kreativnímu konceptu, marketingu a vedení projektů.",
     },
     {
       label: "Teď",
-      text: "Je mi 16 let a studuji obor informační technologie na Smíchovské SPŠ v Praze. Produkuji a stříhám videa pro CZ.NIC a Volt Czechia, vedu tým H2 Grand Prix, jsem členem PR týmu školy a vedu jako lektor aktivity pro mládež.",
+      text: "Je mi 16 let a studuji informační technologie. Zastávám pozici CMO v MultiVerbo, tvořím videoobsah pro CZ.NIC a Volt Czechia a vedu tým H2 Grand Prix. Kreativní tvorbu dnes vnímám jako kombinaci nápadu, vizuálu, technologie, marketingu a leadershipu.",
     },
   ],
   future: {
     label: "Budoucnost",
-    text: "Rád bych se živil primárně tvorbou mediálního obsahu — ale s pevným technickým a organizačním základem.",
+    text: "Upřímně? Nevím. A vlastně mi to tak vyhovuje. Je přede mnou spousta možností, projektů a věcí, které jsem ještě nezkusil. Kam mě to zavede, se teprve ukáže.",
   },
 } as const;
 

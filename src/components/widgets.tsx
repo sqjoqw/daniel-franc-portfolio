@@ -83,51 +83,111 @@ export function MenuBar() {
 /* Desktop icons (right column)                                        */
 /* ------------------------------------------------------------------ */
 
-export function DesktopIcons() {
-  const { openWindow } = useWindows();
+export function DesktopIcons({ variant = "desktop" }: { variant?: "desktop" | "mobile" }) {
+  const { openWindow, open, payload } = useWindows();
+
+  /**
+   * One universal interaction model for the whole OS: a single left click
+   * (or a single tap on touch) opens the element immediately. No Enter key,
+   * no double-click, no selection step in between.
+   *
+   * Creative Portfolio is the only accessible folder; every other desktop
+   * folder answers with the OS "Access Denied" window instead of opening.
+   */
+  const activate = (icon: (typeof desktopIcons)[number]) => {
+    if (icon.type === "portfolio") openWindow("portfolio");
+    else if (icon.type === "settings") openWindow("settings");
+    else openWindow("accessDenied", icon.label);
+  };
+
+  const isLocked = (icon: (typeof desktopIcons)[number]) =>
+    icon.type !== "portfolio" && icon.type !== "settings";
+
+
+  const blockedNow = (icon: (typeof desktopIcons)[number]) =>
+    isLocked(icon) && open === "accessDenied" && payload === icon.label;
+
+  /** Icon + caption button shared by the desktop column and the mobile grid. */
+  const iconButton = (
+    icon: (typeof desktopIcons)[number],
+    i: number,
+    size: "desktop" | "mobile",
+  ) => {
+    const blocked = blockedNow(icon);
+    const glyph = size === "mobile" ? "h-12 w-12" : "h-14 w-14";
+    return (
+      <button
+        key={`${size}-${icon.label}`}
+        type="button"
+        draggable={false}
+        onClick={() => activate(icon)}
+        className={
+          "group flex w-full flex-col items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 animate-[cardin_0.4s_cubic-bezier(0.22,1,0.36,1)_both]" +
+          (blocked ? " ring-red-400 scale-105" : "")
+        }
+        style={{ animationDelay: `${i * 70}ms` }}
+        title={icon.description ?? icon.label}
+      >
+        {icon.type === "settings" ? (
+          <PCIcon
+            className={`${glyph} drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)] transition-all duration-200 group-hover:scale-105 group-active:scale-95`}
+          />
+        ) : (
+          <FolderIcon
+            className={`${glyph} drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)] transition-all duration-200 group-hover:scale-105 group-active:scale-95${
+              blocked ? " opacity-70" : ""
+            }`}
+            color={icon.type === "portfolio" ? "red" : "blue"}
+          />
+        )}
+        <span
+          className={`block w-full max-w-full text-center font-medium leading-[1.25] backdrop-blur-sm transition-all duration-200 group-hover:text-white group-active:scale-95 ${
+            size === "mobile" ? "text-[10px]" : "text-[11px]"
+          } ${
+            icon.type === "portfolio"
+              ? "bg-white/70 text-black/80 group-hover:bg-red-600 group-active:bg-red-500"
+              : icon.type === "settings"
+              ? "bg-white/70 text-black/80 group-hover:bg-blue-600 group-active:bg-blue-500"
+              : "bg-white/70 text-black/80 group-hover:bg-[#0069d9] group-active:bg-[#0059b3]"
+          }`}
+        >
+          {icon.label}
+        </span>
+      </button>
+    );
+  };
+
+  if (variant === "mobile") {
+    // The mobile desktop keeps the whole OS: the accessible Creative Portfolio
+    // folder sits centered, the locked folders follow in a compact grid.
+    const primary = desktopIcons.find((icon) => icon.type === "portfolio");
+    const rest = desktopIcons.filter((icon) => icon !== primary);
+    return (
+      <div className="w-full">
+        {primary ? (
+          <div className="flex w-full justify-center">{iconButton(primary, 0, "mobile")}</div>
+        ) : null}
+        <div className="mt-2 grid w-full grid-cols-3 gap-x-2 gap-y-3">
+          {rest.map((icon, i) => iconButton(icon, i + 1, "mobile"))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative h-full">
+    /* absolute, not relative: the icon layer must not consume layout height,
+       otherwise it pushes the centered desktop hero out of the viewport. */
+    <div className="absolute inset-0">
       {desktopIcons.map((icon, i) => (
         <Draggable
           key={icon.label}
           storageKey={`df-icon-${i}`}
-          anchor={{ top: `${90 + i * 104}px`, right: "2.5%" }}
+          anchor={icon.center ? { top: "50%", left: "50%" } : { top: `${90 + i * 104}px`, right: "2.5%" }}
         >
-          <button
-            draggable={false}
-            onClick={() => {
-              if (icon.type === "portfolio") {
-                openWindow("portfolio");
-              } else if (icon.type === "settings") {
-                openWindow("settings");
-              } else if (icon.type === "skill" && icon.target) {
-                openWindow("folder", icon.target);
-              }
-            }}
-            className="group flex w-20 flex-col items-center gap-1 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 animate-[cardin_0.4s_cubic-bezier(0.22,1,0.36,1)_both]"
-            style={{ animationDelay: `${i * 80}ms` }}
-            title={icon.description ?? icon.label}
-          >
-            {icon.type === "settings" ? (
-              <PCIcon className="h-14 w-14 transition-all duration-200 group-hover:scale-105 group-active:scale-95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)]" />
-            ) : (
-              <FolderIcon
-                className="h-14 w-14 transition-all duration-200 group-hover:scale-105 group-active:scale-95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.15)]"
-                color={icon.type === "portfolio" ? "red" : "blue"}
-              />
-            )}
-            <span
-              className={`block max-w-full text-center text-[11px] font-medium leading-[1.25] backdrop-blur-sm transition-all duration-200 group-hover:bg-[#0069d9] group-hover:text-white group-active:scale-95 ${
-                icon.type === "portfolio"
-                  ? "bg-white/70 text-black/80 group-hover:bg-red-600 group-active:bg-red-500"
-                  : icon.type === "settings"
-                  ? "bg-white/70 text-black/80 group-hover:bg-blue-600 group-active:bg-blue-500"
-                  : "bg-white/70 text-black/80 group-hover:bg-[#0069d9] group-active:bg-[#0059b3]"
-              }`}
-            >
-              {icon.label}
-            </span>
-          </button>
+          {/* The accessible folder is centered on the desktop, both axes. */}
+          <div className={`w-20 ${icon.center ? "-translate-x-1/2 -translate-y-1/2" : ""}`}>
+            {iconButton(icon, i, "desktop")}
+          </div>
         </Draggable>
       ))}
     </div>
@@ -138,7 +198,10 @@ export function DesktopIcons() {
 /* Clock (local time)                                                  */
 /* ------------------------------------------------------------------ */
 
-export function ClockWidget() {
+/** Clock face. `className` carries the size so mobile can render it smaller. */
+export function ClockCard({
+  className = "h-[150px] w-[150px]",
+}: { className?: string } = {}) {
   const now = useNow(1_000);
 
   const hands = useMemo(() => {
@@ -178,9 +241,8 @@ export function ClockWidget() {
   });
 
   return (
-    <Draggable storageKey="df-clock" anchor={{ top: "90px", left: "24px" }}>
       <div
-        className={`${glassCardClass} flex h-[150px] w-[150px] items-center justify-center !p-3`}
+        className={`${glassCardClass} flex ${className} items-center justify-center !p-3`}
         title="Místní čas — Praha"
       >
         <div className="relative h-full w-full">
@@ -248,6 +310,13 @@ export function ClockWidget() {
           </svg>
         </div>
       </div>
+  );
+}
+
+export function ClockWidget() {
+  return (
+    <Draggable storageKey="df-clock" anchor={{ top: "90px", left: "24px" }}>
+      <ClockCard />
     </Draggable>
   );
 }
@@ -258,7 +327,9 @@ export function ClockWidget() {
 
 const WEEKDAYS_LETTERS = ["N", "P", "Ú", "S", "Č", "P", "S"];
 
-export function CalendarWidget() {
+export function CalendarCard({
+  className = "h-[152px] w-[152px]",
+}: { className?: string } = {}) {
   const { openWindow } = useWindows();
   const now = useNow(3_600_000);
 
@@ -273,11 +344,10 @@ export function CalendarWidget() {
     .toUpperCase();
 
   return (
-    <Draggable storageKey="df-calendar" anchor={{ top: "90px", left: "194px" }}>
       <button
         onClick={() => openWindow("booking")}
         title="Naplánovat schůzku"
-        className={`${glassCardClass} h-[152px] w-[152px] cursor-pointer !p-3.5 text-left transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]`}
+        className={`${glassCardClass} ${className} cursor-pointer !p-3.5 text-left transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]`}
       >
         <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-accent">
           {weekdayLong}
@@ -306,6 +376,13 @@ export function CalendarWidget() {
           )}
         </div>
       </button>
+  );
+}
+
+export function CalendarWidget() {
+  return (
+    <Draggable storageKey="df-calendar" anchor={{ top: "90px", left: "194px" }}>
+      <CalendarCard />
     </Draggable>
   );
 }
@@ -321,7 +398,9 @@ function fmt(t: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function MusicWidget() {
+export function MusicCard({
+  className = "h-[150px] w-[320px]",
+}: { className?: string } = {}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
@@ -343,13 +422,12 @@ export function MusicWidget() {
   };
 
   return (
-    <Draggable storageKey="df-music" anchor={{ top: "90px", left: "364px" }}>
       <div
         onClick={toggle}
         role="button"
         aria-label={playing ? "Pozastavit hudbu" : "Přehrát hudbu"}
         title={playing ? "Pozastavit hudbu" : "Přehrát hudbu"}
-        className={`${glassCardClass} h-[150px] w-[320px] cursor-pointer !p-4 transition-transform duration-200 hover:scale-[1.015] active:scale-[0.985]`}
+        className={`${glassCardClass} ${className} cursor-pointer !p-4 transition-transform duration-200 hover:scale-[1.015] active:scale-[0.985]`}
       >
         <audio
           ref={audioRef}
@@ -432,6 +510,13 @@ export function MusicWidget() {
           </div>
         </div>
       </div>
+  );
+}
+
+export function MusicWidget() {
+  return (
+    <Draggable storageKey="df-music" anchor={{ top: "90px", left: "364px" }}>
+      <MusicCard />
     </Draggable>
   );
 }
@@ -439,14 +524,12 @@ export function MusicWidget() {
 function MusicCover() {
   return (
     <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-lg bg-[#1d1e26] shadow-inner">
-      <svg viewBox="0 0 72 72" className="h-14 w-14" aria-label="Obal skladby">
-        <circle cx="36" cy="36" r="30" fill="#0e0f14" />
-        <circle cx="36" cy="36" r="26" fill="none" stroke="#2c2e38" strokeWidth="1" />
-        <circle cx="36" cy="36" r="21" fill="none" stroke="#2c2e38" strokeWidth="1" />
-        <circle cx="36" cy="36" r="16" fill="none" stroke="#2c2e38" strokeWidth="1" />
-        <circle cx="36" cy="36" r="7" fill="#FF3700" />
-        <circle cx="36" cy="36" r="2" fill="#0e0f14" />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={music.cover}
+        alt="Krajinaske hudby"
+        className="h-full w-full rounded-lg object-cover"
+      />
     </div>
   );
 }
@@ -508,7 +591,9 @@ function WeatherIcon({ code, className }: { code: number; className: string }) {
   return <Cloud className={`${className} text-[#A8B0B9]`} aria-hidden="true" />;
 }
 
-export function WeatherWidget() {
+export function WeatherCard({
+  className = "w-[320px]",
+}: { className?: string } = {}) {
   const [days, setDays] = useState<ForecastDay[] | null>(null);
 
   useEffect(() => {
@@ -542,8 +627,7 @@ export function WeatherWidget() {
   const data = days ?? weather.fallback;
 
   return (
-    <Draggable storageKey="df-weather" anchor={{ top: "264px", left: "24px" }}>
-      <div className={`${glassCardClass} w-[320px] !p-4`}>
+      <div className={`${glassCardClass} ${className} !p-4`}>
         <p className="text-[10px] font-semibold text-black/55">
           {weather.city}
           {!days && <span className="ml-1 text-black/35">(offline data)</span>}
@@ -560,6 +644,13 @@ export function WeatherWidget() {
           ))}
         </div>
       </div>
+  );
+}
+
+export function WeatherWidget() {
+  return (
+    <Draggable storageKey="df-weather" anchor={{ top: "264px", left: "24px" }}>
+      <WeatherCard />
     </Draggable>
   );
 }
@@ -568,26 +659,33 @@ export function WeatherWidget() {
 /* Photo + Dock                                                        */
 /* ------------------------------------------------------------------ */
 
+export function PhotoCard({
+  className = "h-[150px] w-[150px]",
+}: { className?: string } = {}) {
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={identity.portrait}
+      alt={identity.portraitAlt}
+      draggable={false}
+      width={150}
+      height={150}
+      className={`${className} rounded-2xl border border-white/45 object-cover shadow-[0_8px_32px_rgba(0,0,0,0.12)]`}
+    />
+  );
+}
+
 export function PhotoWidget() {
   return (
     <Draggable storageKey="df-photo" anchor={{ top: "404px", left: "24px" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={identity.portrait}
-        alt={identity.portraitAlt}
-        draggable={false}
-        width={150}
-        height={150}
-        className="h-[150px] w-[150px] rounded-2xl border border-white/45 object-cover shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
-      />
+      <PhotoCard />
     </Draggable>
   );
 }
 
-export function DockWidget() {
+export function DockBar() {
   const { openWindow } = useWindows();
   return (
-    <Draggable storageKey="df-dock" anchor={{ bottom: "120px", right: "48px" }}>
       <div className={`${glassCardClass} !p-3`}>
         <div className="grid grid-cols-5 gap-1">
           <a
@@ -637,6 +735,14 @@ export function DockWidget() {
           </button>
         </div>
       </div>
+  );
+}
+
+export function DockWidget() {
+  return (
+    /* bottom: 24px keeps the dock clear of the bottom-most desktop icon */
+    <Draggable storageKey="df-dock" anchor={{ bottom: "24px", right: "48px" }}>
+      <DockBar />
     </Draggable>
   );
 }

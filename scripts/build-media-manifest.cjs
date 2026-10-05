@@ -21,10 +21,51 @@ const WALLPAPER_SRC = "C:/Users/danik/Downloads/photobg.jpeg";
 const WALLPAPER_OUT = path.join(ROOT, "public", "photobg.jpeg");
 
 const COLLECTIONS = [
-  { dir: "grafika", id: "grafika", label: "Grafika" },
-  { dir: "photos", id: "fotky", label: "Fotky" },
-  { dir: "videos", id: "videa", label: "Videa" },
+  { dir: "grafika", id: "grafika", label: "Graphic Design" },
+  { dir: "photos", id: "fotky", label: "Photography" },
+  { dir: "videos", id: "videa", label: "Video" },
 ];
+
+/*
+ * Professional naming table.
+ * Folder names never reach the UI: every group is labelled with the same
+ * `Category / Project` convention, and every media item carries the clean
+ * project label instead of its camera/file name.
+ */
+const NAMING = {
+  "grafika/CZ.NIC/Co-je-to-Echo-Chamber": { group: "CZ.NIC / Social Campaign", item: "Echo Chamber" },
+  "grafika/CZ.NIC/Den-bezpecnejsiho-internetu": { group: "CZ.NIC / Awareness", item: "Safer Internet Day" },
+  "grafika/CZ.NIC/Skryta-tvar": { group: "CZ.NIC / Art Direction", item: "Hidden Face" },
+  "fotky/Debata-Tucek-x-Jirout": { group: "Events / Debate Tu\u010dek x Jirout", item: "Debate \u2014 Tu\u010dek x Jirout" },
+  "fotky/Fotbal-Repy-Stodulky": { group: "Sports / Football", item: "Football \u2014 Stod\u016flky" },
+  "fotky/Hackathon": { group: "Events / Hackathons", item: "Hackathon" },
+  "fotky/Maker-Faire": { group: "Events / Maker Faire", item: "Maker Faire" },
+  "fotky/Trask": { group: "Surfaces / Textures", item: "Textures" },
+  "fotky/Volnocas/madarsko": { group: "Travel / Hungary", item: "Hungary" },
+  "fotky/Volnocas/metrorave": { group: "Events / Metro Rave", item: "Metro Rave" },
+  "fotky/Volnocas/Praha": { group: "Travel / Prague", item: "Prague" },
+  "fotky/Volnocas/Snezka": { group: "Travel / S\u011bn\u011b\u017eka", item: "Sn\u011b\u017eka" },
+  "fotky/Volnocas/Turecko": { group: "Travel / Turkey", item: "Turkey" },
+  "fotky/Volt/Den-Evropy": { group: "Volt Czechia / Events", item: "Europe Day" },
+  "fotky/Volt/headshoty": { group: "Volt Czechia / Headshots", item: "Headshots" },
+  "fotky/Volt/Petice-pro-dzban": { group: "Volt Czechia / Campaign", item: "Petition Campaign" },
+  "fotky/ze-strechy-zahrada": { group: "Surfaces / Roof Garden", item: "Roof Garden" },
+  "videa/CZ.NIC": { group: "CZ.NIC / Video", item: "CZ.NIC" },
+  "videa/Konferencni-sal-ruby-hall": { group: "Events / Conference Hall", item: "Conference Hall" },
+  "videa/metro-rave": { group: "Events / Metro Rave", item: "Metro Rave" },
+  "videa/MultiVerbo": { group: "MultiVerbo / Brand Film", item: "MultiVerbo" },
+  "videa/Praha-Sobe": { group: "Praha Sob\u011b / Campaign", item: "Praha Sob\u011b" },
+  "videa/Tanecni-Onder": { group: "Events / Dance Studio", item: "Dance Studio" },
+  "videa/volno-casovy": { group: "Personal / Free Time", item: "Free Time" },
+  "videa/Volt": { group: "Volt Czechia / Campaign", item: "Volt Czechia" },
+};
+
+function displayLabel(collectionId, dirParts, collectionLabel) {
+  const id = dirParts.map(slugify).join("/");
+  const named = NAMING[`${collectionId}/${id}`];
+  if (named) return named;
+  return { group: collectionLabel, item: collectionLabel };
+}
 
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 const VIDEO_EXT = new Set([".mp4", ".mov", ".webm", ".m4v"]);
@@ -54,14 +95,22 @@ function slugify(name) {
   return base + ext;
 }
 
-function uniqueDir(dir, name) {
+/**
+ * Destination name for a source file: the URL-safe slug of its file name.
+ * Existing files are never renamed or overwritten — large videos are
+ * post-processed in place by scripts/compress.cjs, so the manifest run must
+ * stay purely additive (delete the copy first to force a refresh).
+ * Collisions inside one run get a numeric suffix.
+ */
+function uniqueDir(dir, name, taken) {
+  if (!taken.has(name)) return name;
   const ext = path.extname(name);
   const base = path.basename(name, ext);
-  let candidate = name;
   let i = 2;
-  while (fs.existsSync(path.join(dir, candidate))) {
-    candidate = `${base}-${i}${ext}`;
+  let candidate = `${base}-${i}${ext}`;
+  while (taken.has(candidate)) {
     i += 1;
+    candidate = `${base}-${i}${ext}`;
   }
   return candidate;
 }
@@ -130,13 +179,21 @@ function prettifyItemName(fileName) {
   return path.basename(fileName, ext).replace(/[_]+/g, " ").trim() || fileName;
 }
 
-function copyFile(src, destDir, relParts, collection) {
+/** `name` stays a technical detail; `label` is the only string shown in the UI. */
+
+function copyFile(src, destDir, relParts, collection, taken) {
   const name = slugify(path.basename(src));
   fs.mkdirSync(destDir, { recursive: true });
-  const finalName = uniqueDir(destDir, name);
+  const size = fs.statSync(src).size;
+  let namesInDir = taken.get(destDir);
+  if (!namesInDir) {
+    namesInDir = new Set();
+    taken.set(destDir, namesInDir);
+  }
+  const finalName = uniqueDir(destDir, name, namesInDir);
   const dest = path.join(destDir, finalName);
-  const existing = fs.existsSync(dest);
-  if (!existing || fs.statSync(src).size !== fs.statSync(dest).size) {
+  namesInDir.add(finalName);
+  if (!fs.existsSync(dest)) {
     fs.copyFileSync(src, dest);
   }
   const ext = path.extname(finalName).toLowerCase();
@@ -152,7 +209,7 @@ function copyFile(src, destDir, relParts, collection) {
     const dims = imageDimensions(src);
     if (dims) { item.w = dims.w; item.h = dims.h; }
   } else {
-    item.bytes = fs.statSync(src).size;
+    item.bytes = size;
   }
   return item;
 }
@@ -167,11 +224,16 @@ function main() {
     process.exit(1);
   }
 
-  // Wallpaper
+  // Wallpaper — additive like the media copies: an existing public/photobg.jpeg
+  // is kept (delete it to pull a fresh copy from Downloads).
   if (fs.existsSync(WALLPAPER_SRC)) {
-    fs.copyFileSync(WALLPAPER_SRC, WALLPAPER_OUT);
-    const dims = imageDimensions(WALLPAPER_SRC);
-    console.log(`wallpaper photobg.jpeg copied${dims ? ` (${dims.w}x${dims.h})` : ""}`);
+    if (fs.existsSync(WALLPAPER_OUT)) {
+      console.log("wallpaper photobg.jpeg kept (delete it to re-copy)");
+    } else {
+      fs.copyFileSync(WALLPAPER_SRC, WALLPAPER_OUT);
+      const dims = imageDimensions(WALLPAPER_SRC);
+      console.log(`wallpaper photobg.jpeg copied${dims ? ` (${dims.w}x${dims.h})` : ""}`);
+    }
   } else {
     console.warn("WARNING: wallpaper photobg.jpeg not found in Downloads");
   }
@@ -188,8 +250,10 @@ function main() {
   lines.push("  kind: MediaKind;");
   lines.push("  /** URL pod /media/ */");
   lines.push("  src: string;");
-  lines.push("  /** Zobrazovaný název souboru */");
+  lines.push("  /** Administrativní název souboru — v UI se nikdy nezobrazuje */");
   lines.push("  name: string;");
+  lines.push("  /** Profesní název zobrazený na kartě (místo názvu souboru) */");
+  lines.push("  label?: string;");
   lines.push("  /** Vnitřní rozměry obrázku (určuje poměr stran v galerii) */");
   lines.push("  w?: number;");
   lines.push("  h?: number;");
@@ -217,15 +281,20 @@ function main() {
     }
     const files = walk(srcDir);
     const groupMap = new Map();
+    const taken = new Map();
 
     for (const file of files) {
       const rel = path.relative(srcDir, file).split(/[\\/]/);
       const dirParts = rel.slice(0, -1);
       const destDir = path.join(OUT_DIR, collection.dir, ...dirParts.map(slugify));
-      const item = copyFile(file, destDir, dirParts, collection);
+      const item = copyFile(file, destDir, dirParts, collection, taken);
       if (!item) continue;
       const groupId = dirParts.map(slugify).join("/") || "ostatni";
-      const groupLabel = dirParts.length ? prettifyGroupLabel(dirParts) : collection.label;
+      const naming = dirParts.length
+        ? displayLabel(collection.id, dirParts, collection.label)
+        : { group: collection.label, item: collection.label };
+      const groupLabel = naming.group || prettifyGroupLabel(dirParts);
+      item.label = naming.item || groupLabel;
       if (!groupMap.has(groupId)) groupMap.set(groupId, { id: groupId, label: groupLabel, items: [] });
       groupMap.get(groupId).items.push(item);
       totals[item.kind] += 1;
@@ -249,7 +318,7 @@ function main() {
       for (const item of g.items) {
         const dims = item.w && item.h ? `, w: ${item.w}, h: ${item.h}` : "";
         const bytes = item.bytes ? `, bytes: ${item.bytes}` : "";
-        lines.push(`          { kind: "${item.kind}", src: ${JSON.stringify(item.src)}, name: ${JSON.stringify(item.name)}${dims}${bytes} },`);
+        lines.push(`          { kind: "${item.kind}", src: ${JSON.stringify(item.src)}, name: ${JSON.stringify(item.name)}, label: ${JSON.stringify(item.label ?? g.label)}${dims}${bytes} },`);
       }
       lines.push("        ],");
       lines.push("      },");
